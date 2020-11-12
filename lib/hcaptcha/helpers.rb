@@ -6,6 +6,9 @@ module Hcaptcha
       hcaptcha_unreachable: 'Oops, we failed to validate your hCaptcha response. Please try again.',
       verification_failed: 'hCaptcha verification failed, please try again.'
     }.freeze
+    DEFAULT_OPTIONS = {
+      theme: :dark
+    }.freeze
 
     def self.hcaptcha(options)
       if options.key?(:stoken)
@@ -13,6 +16,10 @@ module Hcaptcha
       end
       if options.key?(:ssl)
         raise(HcaptchaError, "SSL is now always true. Please remove 'ssl' from your calls to hcaptcha_tags.")
+      end
+
+      DEFAULT_OPTIONS.each do |name, value|
+        options[name] ||= value
       end
 
       html, tag_attributes = components(options)
