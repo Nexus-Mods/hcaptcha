@@ -22,25 +22,22 @@ Go to the [hCaptcha](https://hcaptcha.com/webmaster/signup) signup page to obtai
 
 The hostname you set it to must be a real hostname, since hCaptcha validates it when you create it in the portal. For example, `example.fmadata.com` does not have a DNS record, but `mydomain.com` does. The DNS record doesn't need to point to your application though, it just has to exist - that's why we added the record into the local hosts file.
 
-## Rails Installation
+## Installation
 
-```ruby
-gem "hcaptcha"
-```
-
-You can keep keys out of the code base with environment variables or with Rails [secrets](https://api.rubyonrails.org/classes/Rails/Application.html#method-i-secrets).
-
+FIrst, add the gem to your bundle:
 ```shell
-export HCAPTCHA_SITE_KEY='6Lc6BAAAAAAAAChqRbQZcn_yyyyyyyyyyyyyyyyy'
-export HCAPTCHA_SECRET_KEY='6Lc6BAAAAAAAAKN3DRm6VA_xxxxxxxxxxxxxxxxx'
+bundle add hcaptcha
 ```
 
+Then, set the following environment variables:
+* `HCAPTCHA_SECRET_KEY`
+* `HCAPTCHA_SITE_KEY`
 
-`include Hcaptcha::Adapters::ViewMethods` where you need `recaptcha_tags`
+> 💡 You should keep keys out of your codebase with external environment variables (using your shell's `export` command), Rails (< 5.2) [secrets](https://guides.rubyonrails.org/v5.1/security.html#custom-secrets), Rails (5.2+) [credentials](https://guides.rubyonrails.org/security.html#custom-credentials), the [dotenv](https://github.com/bkeepers/dotenv) or [figaro](https://github.com/laserlemon/figaro) gems, …
 
-`include Hcaptcha::Adapters::ControllerMethods` where you need `verify_recaptcha`
+## Usage
 
-Add `hcaptcha_tags` to the forms you want to protect:
+First, add `hcaptcha_tags` to the forms you want to protect:
 
 ```erb
 <%= form_for @foo do |f| %>
@@ -62,12 +59,51 @@ else
 end
 ```
 
+If you are **not using Rails**, you should:
+* `include Hcaptcha::Adapters::ViewMethods` where you need `recaptcha_tags`
+* `include Hcaptcha::Adapters::ControllerMethods` where you need `verify_hcaptcha`
 
-## hCaptcha API and Usage
+### API details
 
-### `hcaptcha_tags`
+### `hcaptcha_tags(options = {})`
 
 Use in your views to render the JavaScript widget.
+
+Available options:
+
+| Option                  | Description |
+|-------------------------|-------------|
+| `:badge`                | _legacy, ignored_
+| `:callback`             | _see [official documentation](https://docs.hcaptcha.com/configuration)_
+| `:chalexpired_callback` | _see [official documentation](https://docs.hcaptcha.com/configuration)_
+| `:class`                | Additional CSS classes added to `h-captcha` on the placeholder
+| `:close_callback`       | _see [official documentation](https://docs.hcaptcha.com/configuration)_
+| `:error_callback`       | _see [official documentation](https://docs.hcaptcha.com/configuration)_
+| `:expired_callback`     | _see [official documentation](https://docs.hcaptcha.com/configuration)_
+| `:external_script`      | _alias for `:script` option_
+| `:hl`                   | _see [official documentation](https://docs.hcaptcha.com/configuration) and [available language codes](https://docs.hcaptcha.com/languages)_
+| `:open_callback`        | _see [official documentation](https://docs.hcaptcha.com/configuration)_
+| `:nonce`                | Add a `nonce="…"` attribute to the `<script>` tag
+| `:onload`               | _see [official documentation](https://docs.hcaptcha.com/configuration)_
+| `:recaptchacompat`      | _see [official documentation](https://docs.hcaptcha.com/configuration)_
+| `:render`               | _see [official documentation](https://docs.hcaptcha.com/configuration)_
+| `:script_async`         | Add `async` attribute to the `<script>` tag (default: `true`)
+| `:script_defer`         | Add `defer` attribute to the `<script>` tag (default: `true`)
+| `:script`               | Generate the `<script>` tag (default: `true`)
+| `:site_key`             | Set hCaptcha Site Key (overrides `HCAPTCHA_SITE_KEY` environment variable)
+| `:size`                 | _see [official documentation](https://docs.hcaptcha.com/configuration)_
+| `:stoken`               | _legacy, raises an exception_
+| `:ssl`                  | _legacy, raises an exception_
+| `:theme`                | _see [official documentation](https://docs.hcaptcha.com/configuration)_ (default: `:dark`)
+| `:type`                 | _legacy, ignored_
+| `:ui`                   | _legacy, ignored_
+
+> ℹ️ Unkown options will be passed directly as attributes to the placeholder element.
+>
+> For example, `hcaptcha_tags(foo: "bar")` will generate the default script tag and the following placeholder tag:
+> ```html
+> <div class="h-captcha" data-sitekey="…" foo="bar"></div>
+> ```
 
 ### `verify_recaptcha`
 
