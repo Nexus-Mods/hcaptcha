@@ -7,6 +7,10 @@ module Hcaptcha
       verification_failed: 'hCaptcha verification failed, please try again.'
     }.freeze
     DEFAULT_OPTIONS = {
+      external_script: true,
+      script: true,
+      script_async: true,
+      script_defer: true,
       theme: :dark
     }.freeze
 
@@ -18,13 +22,7 @@ module Hcaptcha
         raise(HcaptchaError, "SSL is now always true. Please remove 'ssl' from your calls to hcaptcha_tags.")
       end
 
-      DEFAULT_OPTIONS.each do |name, value|
-        options[name] ||= value
-      end
-
-      html, tag_attributes = components(options)
-      html << %(<div #{tag_attributes}></div>\n)
-
+      html = generate_tags(options)
       html.respond_to?(:html_safe) ? html.html_safe : html
     end
 
@@ -43,54 +41,63 @@ module Hcaptcha
       end
     end
 
-    private_class_method def self.components(options)
-      html = +''
+    private_class_method def self.generate_tags(options)
+      options = options.dup
+      DEFAULT_OPTIONS.each do |name, value|
+        options[name] = value unless options.key?(name)
+      end
+      generate_script_tag(options) + generate_placeholder_tag(options)
+    end
+
+    private_class_method def self.generate_script_tag(options)
+      # Forge script URL
+      url = Hcaptcha.configuration.api_server_url
+      query_params = hash_to_query(
+        hl: options.delete(:hl),
+        onload: options.delete(:onload),
+        recaptchacompat: options.delete(:recaptchacompat),
+        render: options.delete(:render)
+      )
+      url += "?#{query_params}" unless query_params.empty?
+
+      # Forge additional attributes
+      nonce = options.delete(:nonce)
+      nonce_attr = " nonce='#{nonce}'" if nonce
+      async_attr = "async" if options.delete(:script_async)
+      defer_attr = "defer" if options.delete(:script_defer)
+      additional_attributes = [async_attr, defer_attr, nonce_attr].compact.join(" ")
+
+      return "" if options.delete(:script) == false || options.delete(:external_script) == false
+
+      %(<script src="#{url}" #{additional_attributes}></script>)
+    end
+
+    private_class_method def self.generate_placeholder_tag(options)
       attributes = {}
 
-      options = options.dup
-      class_attribute = options.delete(:class)
-      site_key = options.delete(:site_key)
-      hl = options.delete(:hl)
-      onload = options.delete(:onload)
-      render = options.delete(:render)
-      script_async = options.delete(:script_async)
-      script_defer = options.delete(:script_defer)
-      nonce = options.delete(:nonce)
-      skip_script = (options.delete(:script) == false) || (options.delete(:external_script) == false)
-      ui = options.delete(:ui)
-
-      data_attribute_keys = [:badge, :theme, :type, :callback, :expired_callback, :error_callback, :size]
-      data_attribute_keys << :tabindex unless ui == :button
-      data_attributes = {}
-      data_attribute_keys.each do |data_attribute|
+      # Forge data-* attributes
+      %i[
+        callback close_callback error_callback chalexpired_callback
+        expired_callback open_callback size tabindex theme
+      ].each do |data_attribute|
         value = options.delete(data_attribute)
-        data_attributes["data-#{data_attribute.to_s.tr('_', '-')}"] = value if value
+        attributes["data-#{data_attribute.to_s.tr('_', '-')}"] = value if value
       end
+      attributes["data-sitekey"] = options.delete(:site_key) || Hcaptcha.configuration.site_key!
 
-      site_key ||= Hcaptcha.configuration.site_key!
-      script_url = Hcaptcha.configuration.api_server_url
-      query_params = hash_to_query(
-        hl: hl,
-        onload: onload,
-        render: render
-      )
-      script_url += "?#{query_params}" unless query_params.empty?
-      async_attr = "async" if script_async != false
-      defer_attr = "defer" if script_defer != false
-      nonce_attr = " nonce='#{nonce}'" if nonce
-      html << %(<script src="#{script_url}" #{async_attr} #{defer_attr} #{nonce_attr}></script>\n) unless skip_script
-      attributes["data-sitekey"] = site_key
-      attributes.merge! data_attributes
+      # Forge CSS classes
+      attributes["class"] = "h-captcha #{options.delete(:class)}"
 
-      # The remaining options will be added as attributes on the tag.
-      attributes["class"] = "h-captcha #{class_attribute}"
-      tag_attributes = attributes.merge(options).map { |k, v| %(#{k}="#{v}") }.join(" ")
-
-      [html, tag_attributes]
+      # Remaining options will be added as attributes on the tag.
+      %(<div #{html_attributes(attributes)} #{html_attributes(options)}></div>)
     end
 
     private_class_method def self.hash_to_query(hash)
       hash.delete_if { |_, val| val.nil? || val.empty? }.to_a.map { |pair| pair.join('=') }.join('&')
+    end
+
+    private_class_method def self.html_attributes(hash)
+      hash.map { |k, v| %(#{k}="#{v}") }.join(" ")
     end
   end
 end
