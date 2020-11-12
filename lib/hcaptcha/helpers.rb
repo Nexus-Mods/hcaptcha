@@ -15,12 +15,8 @@ module Hcaptcha
         raise(HcaptchaError, "SSL is now always true. Please remove 'ssl' from your calls to hcaptcha_tags.")
       end
 
-      html, tag_attributes = components(options.dup)
+      html, tag_attributes = components(options)
       html << %(<div #{tag_attributes}></div>\n)
-
-      html << <<-HTML
-        <div class="h-captcha" data-sitekey="#{Hcaptcha.configuration.site_key!}" data-theme="dark"></div>
-      HTML
 
       html.respond_to?(:html_safe) ? html.html_safe : html
     end
@@ -80,7 +76,7 @@ module Hcaptcha
       attributes.merge! data_attributes
 
       # The remaining options will be added as attributes on the tag.
-      attributes["class"] = "hcaptcha #{class_attribute}"
+      attributes["class"] = "h-captcha #{class_attribute}"
       tag_attributes = attributes.merge(options).map { |k, v| %(#{k}="#{v}") }.join(" ")
 
       [html, tag_attributes]
