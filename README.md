@@ -105,7 +105,7 @@ Available options:
 > <div class="h-captcha" data-sitekey="…" foo="bar"></div>
 > ```
 
-### `verify_recaptcha`
+### `verify_hcaptcha`
 
 This method returns `true` or `false` after processing the response token from the hCaptcha widget.
 This is usually called from your controller.
